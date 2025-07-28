@@ -1,21 +1,36 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, Button, Dialog, DialogTitle, DialogContent, Alert, Box, Typography } from "@mui/material";
 import ColorForm from "../components/Colors/ColorForm";
-
-const initialColors = [
-  { key: "1", name: "Red", hexCode: "#ff0000" },
-  { key: "2", name: "Blue", hexCode: "#0000ff" },
-  { key: "3", name: "Green", hexCode: "#00ff00" },
-  { key: "4", name: "Black", hexCode: "#000000" },
-  { key: "5", name: "White", hexCode: "#ffffff" },
-];
+import ColorTable from "../components/Colors/ColorTable";
+import { api } from "../utils/api";
 
 const ColorsPage = () => {
-  const [colors, setColors] = useState(initialColors);
+  const [colors, setColors] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingColor, setEditingColor] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [fetchLoading, setFetchLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  // Fetch colors from backend on component mount
+  useEffect(() => {
+    fetchColors();
+  }, []);
+
+  const fetchColors = async () => {
+    try {
+      setFetchLoading(true);
+      setError("");
+      const data = await api.colors.getAll();
+      setColors(data);
+    } catch (error) {
+      console.error("Error fetching colors:", error);
+      setError("Failed to load colors. Please try again.");
+    } finally {
+      setFetchLoading(false);
+    }
+  };
 
   const handleAdd = () => {
     setEditingColor(null);
@@ -27,94 +42,143 @@ const ColorsPage = () => {
     setDialogOpen(true);
   };
 
-  const handleDelete = (key) => {
-    setColors((prev) => prev.filter((c) => c.key !== key));
-    setMessage("Color deleted successfully");
-    setTimeout(() => setMessage(""), 3000);
+  const handleView = (color) => {
+    // You can implement a view dialog here if needed
+    console.log("View color:", color);
   };
 
-  const handleSubmit = (values) => {
-    setLoading(true);
-    setTimeout(() => {
+  const handleDelete = async (colorId) => {
+    try {
+      setLoading(true);
+      await api.colors.delete(colorId);
+      // Remove the deleted color from the local state
+      setColors((prev) => prev.filter((c) => c._id !== colorId));
+      setMessage("Color deleted successfully");
+      setTimeout(() => setMessage(""), 3000);
+    } catch (error) {
+      console.error("Error deleting color:", error);
+      setError("Failed to delete color. Please try again.");
+      setTimeout(() => setError(""), 3000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (values) => {
+    try {
+      setLoading(true);
+      setError("");
+      
       if (editingColor) {
-        setColors((prev) => prev.map((c) => (c.key === editingColor.key ? { ...c, ...values } : c)));
+        // Update existing color
+        const updatedColor = await api.colors.update(editingColor._id, values);
+        // Update the color in local state
+        setColors((prev) => prev.map((c) => (c._id === editingColor._id ? updatedColor : c)));
         setMessage("Color updated successfully");
       } else {
-        setColors((prev) => [
-          ...prev,
-          { ...values, key: Date.now().toString() },
-        ]);
+        // Create new color
+        const newColor = await api.colors.create(values);
+        // Add the new color to local state
+        setColors((prev) => [...prev, newColor]);
         setMessage("Color added successfully");
       }
-      setLoading(false);
+      
       setDialogOpen(false);
       setTimeout(() => setMessage(""), 3000);
-    }, 700);
+    } catch (error) {
+      console.error("Error saving color:", error);
+      setError(error.message || "Failed to save color. Please try again.");
+      setTimeout(() => setError(""), 3000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    fetchColors();
   };
 
   return (
     <Box>
+      {/* Success Message */}
       {message && (
-        <Alert severity="success" sx={{ mb: 2 }}>
+        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setMessage("")}>
           {message}
         </Alert>
       )}
-      <Card>
+
+      {/* Error Message */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>
+          {error}
+        </Alert>
+      )}
+
+      <Card sx={{ boxShadow: 3, borderRadius: 2 }}>
         <CardContent>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-            <Typography variant="h5" component="h2">
-              Colors
-            </Typography>
-            <Button variant="contained" onClick={handleAdd}>
-              Add Color
-            </Button>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Box>
+              <Typography variant="h5" component="h2" sx={{ fontWeight: 600, color: '#2c3e50' }}>
+                Colors Management
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                Manage product colors and their hex codes
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button 
+                variant="outlined" 
+                onClick={handleRefresh}
+                disabled={fetchLoading}
+              >
+                Refresh
+              </Button>
+              <Button 
+                variant="contained" 
+                onClick={handleAdd}
+                sx={{
+                  background: 'linear-gradient(135deg, #3f51b5 0%, #5a55ae 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #303f9f 0%, #4a47a8 100%)',
+                  }
+                }}
+              >
+                Add Color
+              </Button>
+            </Box>
           </Box>
-          <Box>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: '#f5f5f5' }}>
-                  <th style={{ padding: 8, borderBottom: '1px solid #eee' }}>Color</th>
-                  <th style={{ padding: 8, borderBottom: '1px solid #eee' }}>Color Name</th>
-                  <th style={{ padding: 8, borderBottom: '1px solid #eee' }}>Hex Code</th>
-                  <th style={{ padding: 8, borderBottom: '1px solid #eee', textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {colors.map((row) => (
-                  <tr key={row.key}>
-                    <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>
-                      <Box
-                        sx={{
-                          width: 40,
-                          height: 40,
-                          backgroundColor: row.hexCode,
-                          borderRadius: 1,
-                          border: '1px solid #ddd'
-                        }}
-                      />
-                    </td>
-                    <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>{row.name}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>{row.hexCode}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid #eee', textAlign: 'right' }}>
-                      <Button size="small" variant="outlined" sx={{ mr: 1 }} onClick={() => handleEdit(row)}>
-                        Edit
-                      </Button>
-                      <Button size="small" variant="outlined" color="error" onClick={() => handleDelete(row.key)}>
-                        Delete
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Box>
+
+          {/* Color Table */}
+          <ColorTable
+            data={colors}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onView={handleView}
+            loading={fetchLoading}
+          />
         </CardContent>
       </Card>
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingColor ? "Edit Color" : "Add Color"}
+
+      {/* Add/Edit Color Dialog */}
+      <Dialog 
+        open={dialogOpen} 
+        onClose={() => setDialogOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: 4
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+          borderBottom: '1px solid #e0e0e0'
+        }}>
+          {editingColor ? "Edit Color" : "Add New Color"}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ pt: 3 }}>
           <ColorForm
             initialValues={editingColor || {}}
             onSubmit={handleSubmit}

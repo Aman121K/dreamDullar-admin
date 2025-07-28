@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { Box, Drawer, AppBar, Toolbar, Typography, IconButton } from "@mui/material";
+import { Box, Drawer, AppBar, Toolbar, IconButton } from "@mui/material";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Outlet } from "react-router-dom";
-import { Menu as MenuIcon, ChevronLeft, ChevronRight } from "@mui/icons-material";
+import { Menu as MenuIcon } from "@mui/icons-material";
 import Sidebar from "./components/Sidebar/Sidebar";
 import DashboardPage from "./pages/DashboardPage";
 import ProductsPage from "./pages/ProductsPage";
@@ -109,17 +109,17 @@ function App() {
           }
         >
           <Route index element={<DashboardPage />} />
-          <Route path="products" element={<ProductsPage />} />
-          <Route path="categories" element={<CategoriesPage />} />
-          <Route path="subcategories" element={<SubCategoriesPage />} />
-          <Route path="brands" element={<BrandsPage />} />
-          <Route path="sizes" element={<SizesPage />} />
-          <Route path="colors" element={<ColorsPage />} />
-          <Route path="age-groups" element={<AgeGroupsPage />} />
-          <Route path="banners" element={<BannersPage />} />
-          <Route path="discounts" element={<DiscountsPage />} />
-          <Route path="customers" element={<CustomersPage />} />
-          <Route path="orders" element={<OrdersPage />} />
+          <Route path="/products" element={<ProductsPage />} />
+          <Route path="/categories" element={<CategoriesPage />} />
+          <Route path="/subcategories" element={<SubCategoriesPage />} />
+          <Route path="/brands" element={<BrandsPage />} />
+          <Route path="/sizes" element={<SizesPage />} />
+          <Route path="/colors" element={<ColorsPage />} />
+          <Route path="/age-groups" element={<AgeGroupsPage />} />
+          <Route path="/banners" element={<BannersPage />} />
+          <Route path="/discounts" element={<DiscountsPage />} />
+          <Route path="/customers" element={<CustomersPage />} />
+          <Route path="/orders" element={<OrdersPage />} />
         </Route>
       </Routes>
     </Router>

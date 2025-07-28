@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { Card, TextField, Button, Typography, Box, Alert } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { api } from "../utils/api";
 
 const LoginPage = () => {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({ username: "", password: "" });
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -15,42 +16,39 @@ const LoginPage = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("Login attempt:", formData);
     
-    if (!formData.username || !formData.password) {
-      setError("Please enter both username and password");
+    if (!formData.email || !formData.password) {
+      setError("Please enter both email and password");
       return;
     }
 
     setLoading(true);
     setError("");
 
-    setTimeout(() => {
-      if (
-        formData.username === "vikas" &&
-        formData.password === "vikas"
-      ) {
-        console.log("Login successful, setting localStorage");
-        localStorage.setItem("isAuthenticated", "true");
-        setTimeout(() => {
-          window.location.reload();
-        }, 300);
-      } else {
-        console.log("Login failed");
-        setError("Invalid username or password");
-      }
-      setLoading(false);
-    }, 700);
-  };
+    try {
+      const data = await api.auth.login({
+        email: formData.email,
+        password: formData.password
+      });
 
-  const testLogin = () => {
-    console.log("Test login clicked");
-    setFormData({ username: "vikas", password: "vikas" });
-    setTimeout(() => {
-      handleSubmit({ preventDefault: () => {} });
-    }, 100);
+      console.log("Login successful, storing token");
+      
+      // Store the authentication token
+      localStorage.setItem("authToken", data.token);
+      localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("user", JSON.stringify(data.user || { email: formData.email }));
+      
+      // Navigate to dashboard
+      navigate("/");
+    } catch (error) {
+      console.error("Login error:", error);
+      setError(error.message || "Network error. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -79,12 +77,13 @@ const LoginPage = () => {
             margin="normal"
             required
             fullWidth
-            id="username"
-            label="Username"
-            name="username"
-            autoComplete="username"
+            id="email"
+            label="Email"
+            name="email"
+            type="email"
+            autoComplete="email"
             autoFocus
-            value={formData.username}
+            value={formData.email}
             onChange={handleChange}
             sx={{ mb: 2 }}
           />
@@ -109,15 +108,6 @@ const LoginPage = () => {
             disabled={loading}
           >
             {loading ? "Logging in..." : "Login"}
-          </Button>
-          
-          <Button
-            fullWidth
-            variant="outlined"
-            onClick={testLogin}
-            sx={{ mt: 1 }}
-          >
-            Test Login (Bypass Form)
           </Button>
         </Box>
       </Card>
